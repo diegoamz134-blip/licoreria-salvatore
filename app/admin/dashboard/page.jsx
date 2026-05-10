@@ -3,10 +3,11 @@ import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 
 const STATUS_LABEL = {
-  pending:    { text: 'Pendiente',  color: 'text-yellow-400 bg-yellow-400/10 border-yellow-400/20' },
-  confirmed:  { text: 'Confirmado', color: 'text-blue-400 bg-blue-400/10 border-blue-400/20' },
-  delivered:  { text: 'Entregado',  color: 'text-green-400 bg-green-400/10 border-green-400/20' },
-  cancelled:  { text: 'Cancelado',  color: 'text-red-400 bg-red-400/10 border-red-400/20' },
+  pending:   { text: 'Nuevo',      color: 'text-yellow-400 bg-yellow-400/10 border-yellow-400/20' },
+  packing:   { text: 'Empacando',  color: 'text-orange-400 bg-orange-400/10 border-orange-400/20' },
+  shipped:   { text: 'Enviado',    color: 'text-blue-400 bg-blue-400/10 border-blue-400/20' },
+  completed: { text: 'Completado', color: 'text-green-400 bg-green-400/10 border-green-400/20' },
+  cancelled: { text: 'Cancelado',  color: 'text-red-400 bg-red-400/10 border-red-400/20' },
 };
 
 function StatCard({ label, value, sub, icon, accent }) {

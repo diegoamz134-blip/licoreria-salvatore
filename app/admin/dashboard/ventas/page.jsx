@@ -3,9 +3,10 @@ import { useEffect, useState, useMemo } from 'react';
 import { supabase } from '@/lib/supabase';
 
 const STATUS_OPTIONS = [
-  { value: 'pending',   label: 'Pendiente',  color: 'text-yellow-400 bg-yellow-400/10 border-yellow-400/20' },
-  { value: 'confirmed', label: 'Confirmado', color: 'text-blue-400 bg-blue-400/10 border-blue-400/20' },
-  { value: 'delivered', label: 'Entregado',  color: 'text-green-400 bg-green-400/10 border-green-400/20' },
+  { value: 'pending',   label: 'Nuevo',      color: 'text-yellow-400 bg-yellow-400/10 border-yellow-400/20' },
+  { value: 'packing',   label: 'Empacando',  color: 'text-orange-400 bg-orange-400/10 border-orange-400/20' },
+  { value: 'shipped',   label: 'Enviado',    color: 'text-blue-400 bg-blue-400/10 border-blue-400/20' },
+  { value: 'completed', label: 'Completado', color: 'text-green-400 bg-green-400/10 border-green-400/20' },
   { value: 'cancelled', label: 'Cancelado',  color: 'text-red-400 bg-red-400/10 border-red-400/20' },
 ];
 
@@ -19,9 +20,12 @@ function OrderRow({ order, onStatusChange }) {
 
   const updateStatus = async (val) => {
     setSaving(true);
-    await supabase.from('orders').update({ status: val }).eq('id', order.id);
-    setStatus(val);
-    onStatusChange?.();
+    const res = await fetch('/api/admin/orders', {
+      method:  'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ id: order.id, status: val }),
+    });
+    if (res.ok) { setStatus(val); onStatusChange?.(); }
     setSaving(false);
   };
 
@@ -94,9 +98,9 @@ function OrderRow({ order, onStatusChange }) {
                       <tr key={i} className="border-b border-white/[0.03]">
                         <td className="px-4 py-2.5 text-[#8a8a8a]">{item.product_name}</td>
                         <td className="px-4 py-2.5 text-[#5a5a5a]">{item.quantity}</td>
-                        <td className="px-4 py-2.5 text-[#5a5a5a]">S/ {Number(item.unit_price).toFixed(2)}</td>
+                        <td className="px-4 py-2.5 text-[#5a5a5a]">S/ {Number(item.price_at_time ?? item.unit_price).toFixed(2)}</td>
                         <td className="px-4 py-2.5 text-green-400 font-bold">
-                          S/ {(item.quantity * Number(item.unit_price)).toFixed(2)}
+                          S/ {(item.quantity * Number(item.price_at_time ?? item.unit_price)).toFixed(2)}
                         </td>
                       </tr>
                     ))}
