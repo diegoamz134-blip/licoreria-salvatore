@@ -1,0 +1,57 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* Paleta del logo Salvatore */
+  --bg-deep:    #1e1e1e;
+  --bg-card:    #2e2e2e;
+  --silver:     #c8c8c8;
+  --silver-dim: #8a8a8a;
+  --text-main:  #eeeeee;
+  --border:     rgba(255,255,255,0.07);
+}
+
+/* ── Grain texture overlay ── */
+.grain-overlay {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9999;
+  opacity: 0.04;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-repeat: repeat;
+  mix-blend-mode: screen;
+}
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar       { width: 3px; height: 3px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(200,200,200,0.15); border-radius: 2px; }
+
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* ── Shimmer card ── */
+@keyframes shimmer {
+  from { transform: translateX(-100%); }
+  to   { transform: translateX(100%); }
+}
+.card-shimmer { position: relative; overflow: hidden; }
+.card-shimmer::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent 0%, rgba(200,200,200,0.04) 50%, transparent 100%);
+  transform: translateX(-100%);
+  pointer-events: none;
+}
+.card-shimmer:hover::after { animation: shimmer 0.9s ease forwards; }
+
+/* ── Input focus ── */
+input:focus, textarea:focus {
+  box-shadow: 0 0 0 1px rgba(200,200,200,0.25);
+  outline: none;
+}
+
+html { scroll-behavior: smooth; }
