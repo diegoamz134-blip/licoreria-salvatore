@@ -1,10 +1,13 @@
 import { NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
+import { createClient } from '@/lib/supabase/server';
 
 export async function GET() {
-  const session = cookies().get('admin_session');
-  if (session?.value !== process.env.ADMIN_SECRET) {
+  const supabase = createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  
+  if (!user) {
     return NextResponse.json({ ok: false }, { status: 401 });
   }
+  
   return NextResponse.json({ ok: true });
 }

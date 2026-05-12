@@ -11,36 +11,28 @@ function adminClient() {
   return createAdminClient();
 }
 
-/* GET — listar categorías */
+/* ── Listar marcas ── */
 export async function GET() {
-  const { data, error } = await adminClient()
-    .from('categories')
-    .select('*')
-    .order('name', { ascending: true });
+  if (!(await authorized())) return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+  const { data, error } = await adminClient().from('brands').select('*').order('name');
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json(data);
 }
 
-/* POST — crear categoría */
+/* ── Crear marca ── */
 export async function POST(req) {
   if (!(await authorized())) return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
   const { name } = await req.json();
-  if (!name?.trim()) return NextResponse.json({ error: 'Nombre requerido' }, { status: 400 });
-  const { error } = await adminClient()
-    .from('categories')
-    .insert([{ name: name.trim() }]);
+  const { error } = await adminClient().from('brands').insert([{ name }]);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ ok: true });
 }
 
-/* DELETE — eliminar categoría */
+/* ── Eliminar marca ── */
 export async function DELETE(req) {
   if (!(await authorized())) return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
   const { id } = await req.json();
-  const { error } = await adminClient()
-    .from('categories')
-    .delete()
-    .eq('id', id);
+  const { error } = await adminClient().from('brands').delete().eq('id', id);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ ok: true });
 }

@@ -88,6 +88,18 @@ function OrderCard({ order, onStatusChange }) {
             {order.delivery_address && ` · ${order.delivery_address}`}
           </p>
 
+          {/* Notas del cliente (V2) */}
+          {order.notes && (
+            <div className="mt-2 flex items-start gap-2 bg-yellow-400/5 border border-yellow-400/10 px-2 py-1.5 w-fit">
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#ca8a04" strokeWidth="2.5" className="mt-0.5">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+              </svg>
+              <p className="text-[#ca8a04] text-[10px] leading-tight" style={{ fontFamily: 'var(--font-body)' }}>
+                {order.notes}
+              </p>
+            </div>
+          )}
+
           {/* Items resumen */}
           <p className="text-[#3a3a3a] text-[10px] mt-2 leading-relaxed line-clamp-1" style={{ fontFamily: 'var(--font-body)' }}>
             {items.length > 0

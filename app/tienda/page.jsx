@@ -45,6 +45,7 @@ function SkeletonCard() {
 
 export default function TiendaPage() {
   const [allProducts, setAllProducts] = useState([]);
+  const [categories, setCategories]   = useState([]);
   const [loading, setLoading]         = useState(true);
   const [error, setError]             = useState(null);
   const [query, setQuery]             = useState('');
@@ -56,6 +57,66 @@ export default function TiendaPage() {
   const [canLeft,  setCanLeft]  = useState(false);
   const [canRight, setCanRight] = useState(false);
 
+  /* ── Fetch desde Supabase ── */
+  useEffect(() => {
+    async function fetchData() {
+      setLoading(true);
+      setError(null);
+      
+      const [pRes, cRes] = await Promise.all([
+        supabase
+          .from('products')
+          .select('*, categories(name), brands(name)')
+          .eq('is_active', true)
+          .gt('stock_quantity', 0)
+          .order('created_at', { ascending: false }),
+        supabase.from('categories').select('*').order('name')
+      ]);
+
+      if (pRes.error || cRes.error) {
+        setError('No se pudieron cargar los datos. Intenta de nuevo.');
+      } else {
+        setAllProducts(pRes.data || []);
+        setCategories([{ id: 'Todos', name: 'Todos' }, ...(cRes.data || [])]);
+      }
+      setLoading(false);
+    }
+    fetchData();
+  }, []);
+
+  /* ── Filtrado + ordenamiento ── */
+  const allFiltered = useMemo(() => {
+    let list = [...allProducts];
+
+    if (activeCategory !== 'Todos') {
+      list = list.filter(p => p.category_id === activeCategory);
+    }
+    if (query.trim()) {
+      const q = query.toLowerCase().trim();
+      list = list.filter(p =>
+        p.name.toLowerCase().includes(q) ||
+        (p.description || '').toLowerCase().includes(q) ||
+        (p.categories?.name || '').toLowerCase().includes(q) ||
+        (p.brands?.name || '').toLowerCase().includes(q)
+      );
+    }
+    switch (sortBy) {
+      case 'price_asc':  
+        list.sort((a, b) => (a.sale_price || a.price) - (b.sale_price || b.price));
+        break;
+      case 'price_desc': 
+        list.sort((a, b) => (b.sale_price || b.price) - (a.sale_price || a.price));
+        break;
+      case 'name_asc':   
+        list.sort((a, b) => a.name.localeCompare(b.name, 'es')); 
+        break;
+    }
+    return list;
+  }, [allProducts, query, activeCategory, sortBy]);
+
+  const activeCategoryName = categories.find(c => c.id === activeCategory)?.name || 'Todos';
+
+  /* ... (flechas y scroll) ... */
   const updateArrows = useCallback(() => {
     const el = catsRef.current;
     if (!el) return;
@@ -69,27 +130,6 @@ export default function TiendaPage() {
     el.scrollBy({ left: dir * 180, behavior: 'smooth' });
   };
 
-  /* ── Fetch desde Supabase ── */
-  useEffect(() => {
-    async function fetchProducts() {
-      setLoading(true);
-      setError(null);
-      const { data, error } = await supabase
-        .from('products')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (error) {
-        setError('No se pudieron cargar los productos. Intenta de nuevo.');
-      } else {
-        setAllProducts(data || []);
-      }
-      setLoading(false);
-    }
-    fetchProducts();
-  }, []);
-
-  /* ── Flechas de categorías ── */
   useEffect(() => {
     const el = catsRef.current;
     if (!el) return;
@@ -100,31 +140,7 @@ export default function TiendaPage() {
     return () => { el.removeEventListener('scroll', updateArrows); ro.disconnect(); };
   }, [updateArrows]);
 
-  /* ── Reset página cuando cambian filtros ── */
   useEffect(() => { setPage(1); }, [query, activeCategory, sortBy]);
-
-  /* ── Filtrado + ordenamiento ── */
-  const allFiltered = useMemo(() => {
-    let list = [...allProducts];
-
-    if (activeCategory !== 'Todos') {
-      list = list.filter(p => p.category === activeCategory);
-    }
-    if (query.trim()) {
-      const q = query.toLowerCase().trim();
-      list = list.filter(p =>
-        p.name.toLowerCase().includes(q) ||
-        (p.description || '').toLowerCase().includes(q) ||
-        (p.category || '').toLowerCase().includes(q)
-      );
-    }
-    switch (sortBy) {
-      case 'price_asc':  list.sort((a, b) => a.price - b.price);                  break;
-      case 'price_desc': list.sort((a, b) => b.price - a.price);                  break;
-      case 'name_asc':   list.sort((a, b) => a.name.localeCompare(b.name, 'es')); break;
-    }
-    return list;
-  }, [allProducts, query, activeCategory, sortBy]);
 
   const totalPages = Math.max(1, Math.ceil(allFiltered.length / PAGE_SIZE));
   const safePage   = Math.min(page, totalPages);
@@ -173,7 +189,7 @@ export default function TiendaPage() {
               type="text"
               value={query}
               onChange={e => setQuery(e.target.value)}
-              placeholder="Buscar por nombre, categoría…"
+              placeholder="Buscar por nombre, categoría, marca…"
               className="w-full bg-[#242424] border border-white/[0.08] text-[#e8e8e8] text-sm
                 pl-10 pr-10 py-3 placeholder:text-[#3a3a3a]
                 focus:border-[#c8c8c8]/30 focus:outline-none transition-colors"
@@ -209,10 +225,10 @@ export default function TiendaPage() {
 
             {/* Scroll de categorías */}
             <div ref={catsRef} className="flex gap-1.5 overflow-x-auto no-scrollbar flex-1 pb-0.5">
-              {CATEGORIES.map(cat => {
-                const active = activeCategory === cat;
+              {categories.map(cat => {
+                const active = activeCategory === cat.id;
                 return (
-                  <button key={cat} onClick={() => setCategory(cat)}
+                  <button key={cat.id} onClick={() => setCategory(cat.id)}
                     className={`flex-shrink-0 flex items-center gap-1.5 text-[9px] tracking-[0.25em]
                       uppercase px-3 py-1.5 border transition-all duration-150 font-bold
                       ${active
@@ -220,10 +236,7 @@ export default function TiendaPage() {
                         : 'border-white/[0.08] text-[#5a5a5a] hover:border-white/20 hover:text-[#8a8a8a]'
                       }`}
                     style={{ fontFamily: 'var(--font-body)' }}>
-                    <span className={active ? 'text-black' : 'text-[#4a4a4a]'}>
-                      {CATEGORY_ICONS[cat]}
-                    </span>
-                    {cat}
+                    {cat.name}
                   </button>
                 );
               })}
@@ -280,7 +293,7 @@ export default function TiendaPage() {
               {activeCategory !== 'Todos' && (
                 <span className="flex items-center gap-1.5 bg-[#2e2e2e] border border-white/[0.08]
                   text-[#8a8a8a] text-[8.5px] px-2 py-0.5" style={{ fontFamily: 'var(--font-body)' }}>
-                  {activeCategory}
+                  {activeCategoryName}
                   <button onClick={() => setCategory('Todos')} className="text-[#5a5a5a] hover:text-[#c8c8c8]">×</button>
                 </span>
               )}

@@ -110,12 +110,16 @@ export default function ProductCard({ product }) {
     if (rect) flyToCart(rect);
     showToast(product.name);
 
-    addItem(product);
+    // Usar el precio de oferta si existe
+    const finalPrice = product.sale_price || product.price;
+    addItem({ ...product, price: finalPrice });
+    
     setAdded(true);
     setTimeout(() => setAdded(false), 1500);
   };
 
   const isOutOfStock = product.stock_quantity === 0;
+  const hasSale      = product.sale_price && product.sale_price < product.price;
 
   return (
     <article
@@ -132,14 +136,24 @@ export default function ProductCard({ product }) {
           loading="lazy"
         />
 
-        {/* Category badge */}
-        <div className="absolute top-2.5 left-2.5">
-          <span
-            className="bg-black/60 backdrop-blur-sm text-[#8a8a8a] text-[8.5px] tracking-[0.3em] uppercase px-2 py-1"
-            style={{ fontFamily: 'var(--font-body, "Lato", sans-serif)', fontWeight: 400 }}
-          >
-            {product.category}
-          </span>
+        {/* Badges */}
+        <div className="absolute top-2.5 left-2.5 flex flex-col gap-1.5">
+          {product.categories?.name && (
+            <span
+              className="bg-black/60 backdrop-blur-sm text-[#8a8a8a] text-[8.5px] tracking-[0.3em] uppercase px-2 py-1 w-fit"
+              style={{ fontFamily: 'var(--font-body, "Lato", sans-serif)', fontWeight: 400 }}
+            >
+              {product.categories.name}
+            </span>
+          )}
+          {hasSale && (
+            <span
+              className="bg-green-600 text-white text-[8.5px] tracking-[0.2em] uppercase px-2 py-1 font-bold w-fit shadow-lg"
+              style={{ fontFamily: 'var(--font-body, "Lato", sans-serif)' }}
+            >
+              Oferta
+            </span>
+          )}
         </div>
 
         {/* Out of stock */}
@@ -157,12 +171,20 @@ export default function ProductCard({ product }) {
 
       {/* ── Info ── */}
       <div className="p-3.5 flex flex-col flex-1">
-        <h3
-          className="text-[#e8e8e8] text-base leading-tight mb-1.5 font-semibold"
-          style={{ fontFamily: 'var(--font-display, "Raleway", sans-serif)', fontWeight: 600 }}
-        >
-          {product.name}
-        </h3>
+        <div className="mb-1.5">
+          {product.brands?.name && (
+            <p className="text-[#4a4a4a] text-[8px] tracking-[0.3em] uppercase font-bold"
+              style={{ fontFamily: 'var(--font-body)' }}>
+              {product.brands.name}
+            </p>
+          )}
+          <h3
+            className="text-[#e8e8e8] text-base leading-tight font-semibold"
+            style={{ fontFamily: 'var(--font-display, "Raleway", sans-serif)', fontWeight: 600 }}
+          >
+            {product.name}
+          </h3>
+        </div>
 
         <p
           className="text-[#5a5a5a] text-xs leading-relaxed mb-3 flex-1 line-clamp-2"
@@ -173,19 +195,27 @@ export default function ProductCard({ product }) {
 
         {/* Price + Stock */}
         <div className="flex items-center justify-between mb-3">
-          <div className="flex items-baseline gap-1">
-          <span
-            className="text-[#5a5a5a] text-[10px]"
-            style={{ fontFamily: 'var(--font-body, "Lato", sans-serif)' }}
-          >
-            S/
-          </span>
-          <span
-            className="text-[#c8c8c8] text-xl"
-            style={{ fontFamily: 'var(--font-display, "Raleway", sans-serif)', fontWeight: 700 }}
-          >
-            {Number(product.price).toFixed(2)}
-          </span>
+          <div className="flex flex-col">
+            {hasSale && (
+              <span className="text-[#4a4a4a] text-[10px] line-through decoration-red-900/50"
+                style={{ fontFamily: 'var(--font-body)' }}>
+                S/ {Number(product.price).toFixed(2)}
+              </span>
+            )}
+            <div className="flex items-baseline gap-1">
+              <span
+                className="text-[#5a5a5a] text-[10px]"
+                style={{ fontFamily: 'var(--font-body, "Lato", sans-serif)' }}
+              >
+                S/
+              </span>
+              <span
+                className="text-[#c8c8c8] text-xl"
+                style={{ fontFamily: 'var(--font-display, "Raleway", sans-serif)', fontWeight: 700 }}
+              >
+                {Number(hasSale ? product.sale_price : product.price).toFixed(2)}
+              </span>
+            </div>
           </div>
 
           {/* Stock */}
