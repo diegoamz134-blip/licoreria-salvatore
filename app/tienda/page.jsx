@@ -53,6 +53,12 @@ export default function TiendaPage() {
   const [sortBy, setSortBy]           = useState('default');
   const [page, setPage]               = useState(1);
 
+  // Filtros avanzados
+  const [showFilters, setShowFilters] = useState(false);
+  const [activeBrand, setActiveBrand] = useState('Todas');
+  const [minPrice, setMinPrice]       = useState('');
+  const [maxPrice, setMaxPrice]       = useState('');
+
   const catsRef   = useRef(null);
   const [canLeft,  setCanLeft]  = useState(false);
   const [canRight, setCanRight] = useState(false);
@@ -84,12 +90,29 @@ export default function TiendaPage() {
     fetchData();
   }, []);
 
+  const availableBrands = useMemo(() => {
+    const brands = new Set();
+    allProducts.forEach(p => {
+      if (p.brands?.name) brands.add(p.brands.name);
+    });
+    return Array.from(brands).sort();
+  }, [allProducts]);
+
   /* ── Filtrado + ordenamiento ── */
   const allFiltered = useMemo(() => {
     let list = [...allProducts];
 
     if (activeCategory !== 'Todos') {
       list = list.filter(p => p.category_id === activeCategory);
+    }
+    if (activeBrand !== 'Todas') {
+      list = list.filter(p => p.brands?.name === activeBrand);
+    }
+    if (minPrice !== '') {
+      list = list.filter(p => (p.sale_price || p.price) >= Number(minPrice));
+    }
+    if (maxPrice !== '') {
+      list = list.filter(p => (p.sale_price || p.price) <= Number(maxPrice));
     }
     if (query.trim()) {
       const q = query.toLowerCase().trim();
@@ -112,7 +135,7 @@ export default function TiendaPage() {
         break;
     }
     return list;
-  }, [allProducts, query, activeCategory, sortBy]);
+  }, [allProducts, query, activeCategory, sortBy, activeBrand, minPrice, maxPrice]);
 
   const activeCategoryName = categories.find(c => c.id === activeCategory)?.name || 'Todos';
 
@@ -140,13 +163,13 @@ export default function TiendaPage() {
     return () => { el.removeEventListener('scroll', updateArrows); ro.disconnect(); };
   }, [updateArrows]);
 
-  useEffect(() => { setPage(1); }, [query, activeCategory, sortBy]);
+  useEffect(() => { setPage(1); }, [query, activeCategory, sortBy, activeBrand, minPrice, maxPrice]);
 
   const totalPages = Math.max(1, Math.ceil(allFiltered.length / PAGE_SIZE));
   const safePage   = Math.min(page, totalPages);
   const results    = allFiltered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
-  const hasFilters = query.trim() || activeCategory !== 'Todos';
-  const clearAll   = () => { setQuery(''); setCategory('Todos'); setSortBy('default'); };
+  const hasFilters = query.trim() || activeCategory !== 'Todos' || activeBrand !== 'Todas' || minPrice !== '' || maxPrice !== '';
+  const clearAll   = () => { setQuery(''); setCategory('Todos'); setSortBy('default'); setActiveBrand('Todas'); setMinPrice(''); setMaxPrice(''); };
 
   const goTo = (p) => {
     setPage(p);
@@ -178,32 +201,62 @@ export default function TiendaPage() {
             </span>
           </div>
 
-          {/* Buscador */}
-          <div className="relative mb-4">
-            <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#4a4a4a] pointer-events-none">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
-                <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
-              </svg>
-            </div>
-            <input
-              type="text"
-              value={query}
-              onChange={e => setQuery(e.target.value)}
-              placeholder="Buscar por nombre, categoría, marca…"
-              className="w-full bg-[#242424] border border-white/[0.08] text-[#e8e8e8] text-sm
-                pl-10 pr-10 py-3 placeholder:text-[#3a3a3a]
-                focus:border-[#c8c8c8]/30 focus:outline-none transition-colors"
-              style={{ fontFamily: 'var(--font-body)' }}
-            />
-            {query && (
-              <button onClick={() => setQuery('')}
-                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#4a4a4a] hover:text-[#8a8a8a] transition-colors">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+          {/* Buscador y toggle filtros */}
+          <div className="flex flex-col sm:flex-row gap-3 mb-4">
+            <div className="relative flex-1">
+              <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#4a4a4a] pointer-events-none">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
+                  <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
                 </svg>
-              </button>
-            )}
+              </div>
+              <input
+                type="text"
+                value={query}
+                onChange={e => setQuery(e.target.value)}
+                placeholder="Buscar por nombre, categoría, marca…"
+                className="w-full bg-[#242424] border border-white/[0.08] text-[#e8e8e8] text-sm
+                  pl-10 pr-10 py-3 placeholder:text-[#3a3a3a]
+                  focus:border-[#c8c8c8]/30 focus:outline-none transition-colors"
+                style={{ fontFamily: 'var(--font-body)' }}
+              />
+              {query && (
+                <button onClick={() => setQuery('')}
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#4a4a4a] hover:text-[#8a8a8a] transition-colors">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                  </svg>
+                </button>
+              )}
+            </div>
+            
+            <button onClick={() => setShowFilters(!showFilters)} className="flex items-center justify-center gap-2 bg-[#242424] border border-white/[0.08] hover:border-[#c8c8c8]/30 text-[#8a8a8a] hover:text-white px-5 py-3 transition-colors text-[9px] tracking-widest uppercase" style={{ fontFamily: 'var(--font-body)' }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/>
+              </svg>
+              Filtros Avanzados
+            </button>
           </div>
+
+          {/* Panel Filtros Avanzados */}
+          {showFilters && (
+            <div className="mb-5 p-5 bg-[#242424] border border-white/[0.05] grid grid-cols-1 sm:grid-cols-2 gap-6 animate-in slide-in-from-top-2 fade-in duration-200">
+              <div>
+                <label className="block text-[#5a5a5a] text-[9px] uppercase tracking-widest mb-2" style={{ fontFamily: 'var(--font-body)' }}>Marca</label>
+                <select value={activeBrand} onChange={e => setActiveBrand(e.target.value)} className="w-full bg-[#1a1a1a] border border-white/10 text-[#e8e8e8] text-xs p-3 outline-none focus:border-white/20">
+                  <option value="Todas">Todas las marcas</option>
+                  {availableBrands.map(b => <option key={b} value={b}>{b}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-[#5a5a5a] text-[9px] uppercase tracking-widest mb-2" style={{ fontFamily: 'var(--font-body)' }}>Rango de Precio (S/)</label>
+                <div className="flex items-center gap-3">
+                  <input type="number" placeholder="Mínimo" value={minPrice} onChange={e => setMinPrice(e.target.value)} className="w-full bg-[#1a1a1a] border border-white/10 text-[#e8e8e8] text-xs p-3 outline-none focus:border-white/20" />
+                  <span className="text-[#5a5a5a]">-</span>
+                  <input type="number" placeholder="Máximo" value={maxPrice} onChange={e => setMaxPrice(e.target.value)} className="w-full bg-[#1a1a1a] border border-white/10 text-[#e8e8e8] text-xs p-3 outline-none focus:border-white/20" />
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Categorías + Ordenar */}
           <div className="flex items-center gap-3">
@@ -280,7 +333,7 @@ export default function TiendaPage() {
 
           {/* Chips filtros activos */}
           {hasFilters && (
-            <div className="flex items-center gap-2 mt-3 pt-3 border-t border-white/[0.05]">
+            <div className="flex items-center gap-2 mt-3 pt-3 border-t border-white/[0.05] flex-wrap">
               <span className="text-[#4a4a4a] text-[8.5px] tracking-widest uppercase"
                 style={{ fontFamily: 'var(--font-body)' }}>Filtros:</span>
               {query.trim() && (
@@ -295,6 +348,20 @@ export default function TiendaPage() {
                   text-[#8a8a8a] text-[8.5px] px-2 py-0.5" style={{ fontFamily: 'var(--font-body)' }}>
                   {activeCategoryName}
                   <button onClick={() => setCategory('Todos')} className="text-[#5a5a5a] hover:text-[#c8c8c8]">×</button>
+                </span>
+              )}
+              {activeBrand !== 'Todas' && (
+                <span className="flex items-center gap-1.5 bg-[#2e2e2e] border border-white/[0.08]
+                  text-[#8a8a8a] text-[8.5px] px-2 py-0.5" style={{ fontFamily: 'var(--font-body)' }}>
+                  Marca: {activeBrand}
+                  <button onClick={() => setActiveBrand('Todas')} className="text-[#5a5a5a] hover:text-[#c8c8c8]">×</button>
+                </span>
+              )}
+              {(minPrice !== '' || maxPrice !== '') && (
+                <span className="flex items-center gap-1.5 bg-[#2e2e2e] border border-white/[0.08]
+                  text-[#8a8a8a] text-[8.5px] px-2 py-0.5" style={{ fontFamily: 'var(--font-body)' }}>
+                  Precio: {minPrice || '0'} - {maxPrice || '∞'}
+                  <button onClick={() => { setMinPrice(''); setMaxPrice(''); }} className="text-[#5a5a5a] hover:text-[#c8c8c8]">×</button>
                 </span>
               )}
               <button onClick={clearAll}

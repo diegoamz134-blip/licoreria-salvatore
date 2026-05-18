@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useCart } from '@/lib/CartContext';
+import { supabase } from '@/lib/supabase';
 
 const WA_LINK = 'https://wa.me/51907081065?text=Hola%20Licorería%20Salvatore%2C%20quisiera%20hacer%20un%20pedido%20%F0%9F%A5%83';
 
@@ -111,31 +112,12 @@ function HeroSection() {
 }
 
 /* ─────────────── PROMOCIONES ─────────────── */
-const PROMOS = [
-  {
-    id: 1,
-    tag: 'Oferta de la semana',
-    name: 'Johnnie Walker Black Label',
-    desc: 'Scotch whisky 12 años de maduración',
-    originalPrice: 99.90,
-    salePrice: 79.90,
-    badge: '−20%',
-    image: 'https://images.unsplash.com/photo-1527281400683-1aae777175f8?w=900&q=80',
-  },
-  {
-    id: 2,
-    tag: 'Celebra esta semana',
-    name: 'Moët & Chandon Imperial',
-    desc: 'Champagne brut francés de alta gama',
-    originalPrice: 250.00,
-    salePrice: 199.90,
-    badge: '−20%',
-    image: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=900&q=80',
-  },
-];
-
 function PromoCard({ promo, delay }) {
   const [ref, visible] = useReveal(delay);
+  const discount = promo.sale_price && promo.sale_price < promo.price
+    ? Math.round((1 - (promo.sale_price / promo.price)) * 100)
+    : 0;
+
   return (
     <div
       ref={ref}
@@ -144,7 +126,8 @@ function PromoCard({ promo, delay }) {
         ${visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'}`}
     >
       <img
-        src={promo.image} alt={promo.name}
+        src={promo.image_url || 'https://images.unsplash.com/photo-1527281400683-1aae777175f8?w=900&q=80'} 
+        alt={promo.name}
         className="absolute inset-0 w-full h-full object-cover opacity-55
           group-hover:scale-105 group-hover:opacity-65 transition-all duration-700"
       />
@@ -153,36 +136,40 @@ function PromoCard({ promo, delay }) {
       <div className="absolute inset-0 bg-gradient-to-r from-black/30 to-transparent" />
 
       {/* Badge descuento */}
-      <div className="absolute top-4 right-4 bg-red-600 text-white text-[10px] font-black
-        px-2.5 py-1 tracking-[0.25em]"
-        style={{ fontFamily: 'var(--font-body)' }}>
-        {promo.badge}
-      </div>
+      {discount > 0 && (
+        <div className="absolute top-4 right-4 bg-red-600 text-white text-[10px] font-black
+          px-2.5 py-1 tracking-[0.25em]"
+          style={{ fontFamily: 'var(--font-body)' }}>
+          −{discount}%
+        </div>
+      )}
 
       {/* Contenido */}
       <div className="absolute bottom-0 left-0 right-0 p-5">
         <p className="text-[#c8c8c8]/60 text-[9px] tracking-[0.4em] uppercase mb-1"
           style={{ fontFamily: 'var(--font-body)', fontWeight: 700 }}>
-          {promo.tag}
+          {discount > 0 ? 'Oferta Especial' : 'Recomendado'}
         </p>
         <h3 className="text-[#eeeeee] text-xl leading-tight mb-1"
           style={{ fontFamily: 'var(--font-display)', fontWeight: 700 }}>
           {promo.name}
         </h3>
-        <p className="text-[#5a5a5a] text-xs mb-4"
+        <p className="text-[#5a5a5a] text-xs mb-4 line-clamp-2"
           style={{ fontFamily: 'var(--font-body)' }}>
-          {promo.desc}
+          {promo.description}
         </p>
 
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-baseline gap-2.5">
-            <span className="text-[#5a5a5a] text-sm line-through"
-              style={{ fontFamily: 'var(--font-body)' }}>
-              S/ {promo.originalPrice.toFixed(2)}
-            </span>
+            {discount > 0 && (
+              <span className="text-[#5a5a5a] text-sm line-through"
+                style={{ fontFamily: 'var(--font-body)' }}>
+                S/ {Number(promo.price).toFixed(2)}
+              </span>
+            )}
             <span className="text-[#c8c8c8] text-2xl font-black leading-none"
               style={{ fontFamily: 'var(--font-display)', fontWeight: 800 }}>
-              S/ {promo.salePrice.toFixed(2)}
+              S/ {Number(promo.sale_price || promo.price).toFixed(2)}
             </span>
           </div>
           <Link
@@ -199,8 +186,10 @@ function PromoCard({ promo, delay }) {
   );
 }
 
-function PromotionsSection() {
+function PromotionsSection({ promos }) {
   const [titleRef, titleVisible] = useReveal(0);
+  if (!promos || promos.length === 0) return null;
+
   return (
     <section className="px-3 py-16 max-w-6xl mx-auto">
       <div
@@ -220,7 +209,7 @@ function PromotionsSection() {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        {PROMOS.map((promo, i) => (
+        {promos.map((promo, i) => (
           <PromoCard key={promo.id} promo={promo} delay={i * 130} />
         ))}
       </div>
@@ -229,13 +218,6 @@ function PromotionsSection() {
 }
 
 /* ─────────────── MÁS VENDIDOS ─────────────── */
-const BEST_SELLERS = [
-  { id: '1', name: 'Johnnie Walker Black',  price: 89.90,  category: 'Whisky',    image: 'https://images.unsplash.com/photo-1569529465841-dfecdab7503b?w=600&q=80', description: 'Scotch whisky 12 años. Ahumado y profundo.',   stock_quantity: 15 },
-  { id: '4', name: 'Bombay Sapphire',       price: 72.50,  category: 'Gin',       image: 'https://images.unsplash.com/photo-1544145945-f90425340c7e?w=600&q=80', description: 'Gin con 10 botánicos. Floral y cítrico.',       stock_quantity: 18 },
-  { id: '2', name: 'Absolut Vodka',         price: 49.90,  category: 'Vodka',     image: 'https://images.unsplash.com/photo-1550985616-10810253b84d?w=600&q=80', description: 'Vodka sueco puro. Excepcionalmente suave.',      stock_quantity: 25 },
-  { id: '3', name: 'Havana Club 7 Años',    price: 65.00,  category: 'Ron',       image: 'https://images.unsplash.com/photo-1512374382149-233c42b6a83b?w=600&q=80', description: 'Ron cubano añejo. Notas de caña y madera.',   stock_quantity: 20 },
-];
-
 function BestSellerCard({ product, delay }) {
   const { addItem } = useCart();
   const [ref, visible] = useReveal(delay);
@@ -246,6 +228,8 @@ function BestSellerCard({ product, delay }) {
     addItem(product);
     setTimeout(() => setAdded(false), 900);
   };
+
+  const currentPrice = product.sale_price || product.price;
 
   return (
     <div
@@ -258,7 +242,7 @@ function BestSellerCard({ product, delay }) {
       {/* Imagen */}
       <div className="relative overflow-hidden bg-[#1e1e1e]" style={{ aspectRatio: '4/3' }}>
         <img
-          src={product.image}
+          src={product.image_url || 'https://images.unsplash.com/photo-1569529465841-dfecdab7503b?w=600&q=80'}
           alt={product.name}
           className="w-full h-full object-cover opacity-80
             group-hover:scale-105 group-hover:opacity-95 transition-all duration-700"
@@ -266,7 +250,7 @@ function BestSellerCard({ product, delay }) {
         <div className="absolute top-3 left-3">
           <span className="bg-black/70 text-[#8a8a8a] text-[8px] tracking-[0.3em] uppercase px-2 py-1"
             style={{ fontFamily: 'var(--font-body)' }}>
-            {product.category}
+            {product.categories?.name || 'Licores'}
           </span>
         </div>
         {/* Hover overlay */}
@@ -276,18 +260,18 @@ function BestSellerCard({ product, delay }) {
 
       {/* Info */}
       <div className="p-4">
-        <h3 className="text-[#e8e8e8] text-base font-semibold leading-tight mb-1"
+        <h3 className="text-[#e8e8e8] text-base font-semibold leading-tight mb-1 truncate"
           style={{ fontFamily: 'var(--font-display)', fontWeight: 700 }}>
           {product.name}
         </h3>
-        <p className="text-[#4a4a4a] text-xs mb-4 leading-relaxed"
+        <p className="text-[#4a4a4a] text-xs mb-4 leading-relaxed line-clamp-2 min-h-[2.5rem]"
           style={{ fontFamily: 'var(--font-body)' }}>
           {product.description}
         </p>
         <div className="flex items-center justify-between">
           <span className="text-[#c8c8c8] text-xl font-black"
             style={{ fontFamily: 'var(--font-display)', fontWeight: 800 }}>
-            S/ {product.price.toFixed(2)}
+            S/ {Number(currentPrice).toFixed(2)}
           </span>
           <button
             onClick={handleAdd}
@@ -307,8 +291,10 @@ function BestSellerCard({ product, delay }) {
   );
 }
 
-function BestSellersSection() {
+function BestSellersSection({ products }) {
   const [titleRef, titleVisible] = useReveal(0);
+  if (!products || products.length === 0) return null;
+
   return (
     <section className="px-3 py-16 max-w-6xl mx-auto">
       <div
@@ -328,7 +314,7 @@ function BestSellersSection() {
       </div>
 
       <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
-        {BEST_SELLERS.map((p, i) => (
+        {products.map((p, i) => (
           <BestSellerCard key={p.id} product={p} delay={i * 100} />
         ))}
       </div>
@@ -592,14 +578,58 @@ function LandingFooter() {
 
 /* ─────────────── PAGE ─────────────── */
 export default function LandingPage() {
+  const [promos, setPromos] = useState([]);
+  const [bestSellers, setBestSellers] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchFeatured() {
+      setLoading(true);
+      try {
+        // Obtener todos los productos activos
+        const { data: allActive } = await supabase
+          .from('products')
+          .select('*, categories(name)')
+          .eq('is_active', true)
+          .order('created_at', { ascending: false });
+
+        const products = allActive || [];
+
+        // Favoritos: Priorizar destacados, rellenar con recientes
+        const featured = products.filter(p => p.is_featured);
+        const othersForFav = products.filter(p => !p.is_featured);
+        const bestSellersData = [...featured, ...othersForFav].slice(0, 4);
+
+        // Promos: Priorizar ofertas, rellenar con los de mayor precio
+        const withSale = products.filter(p => p.sale_price && p.sale_price < p.price);
+        const withoutSale = products.filter(p => !p.sale_price || p.sale_price >= p.price).sort((a, b) => b.price - a.price);
+        const promosData = [...withSale, ...withoutSale].slice(0, 2);
+
+        setBestSellers(bestSellersData);
+        setPromos(promosData);
+      } catch (err) {
+        console.error('Error fetching landing products:', err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchFeatured();
+  }, []);
+
   return (
     <main className="bg-[#1e1e1e]">
       <HeroSection />
-      <PromotionsSection />
-      <BestSellersSection />
+      {!loading && promos.length > 0 && <PromotionsSection promos={promos} />}
+      {!loading && bestSellers.length > 0 && <BestSellersSection products={bestSellers} />}
+      {loading && (
+        <div className="py-20 text-center text-[#4a4a4a] text-xs uppercase tracking-[0.2em]">
+          Cargando selección...
+        </div>
+      )}
       <HowItWorksSection />
       <ScheduleSection />
       <LandingFooter />
     </main>
   );
 }
+

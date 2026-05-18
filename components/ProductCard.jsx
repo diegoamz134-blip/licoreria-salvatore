@@ -1,5 +1,6 @@
 'use client';
 import { useState, useRef } from 'react';
+import Link from 'next/link';
 import { useCart } from '@/lib/CartContext';
 
 /* ── Inyecta los keyframes solo la primera vez ── */
@@ -128,7 +129,7 @@ export default function ProductCard({ product }) {
         transition-all duration-300 hover:-translate-y-0.5 hover:border-[#c8c8c8]/20 hover:shadow-[0_6px_24px_rgba(0,0,0,0.35)]"
     >
       {/* ── Imagen ── */}
-      <div className="relative overflow-hidden bg-[#242424]" style={{ aspectRatio: '3/4' }}>
+      <Link href={`/tienda/${product.slug || product.id}`} className="relative overflow-hidden bg-[#242424] block" style={{ aspectRatio: '3/4' }}>
         <img
           src={product.image_url}
           alt={product.name}
@@ -167,7 +168,7 @@ export default function ProductCard({ product }) {
             </span>
           </div>
         )}
-      </div>
+      </Link>
 
       {/* ── Info ── */}
       <div className="p-3.5 flex flex-col flex-1">
@@ -178,12 +179,14 @@ export default function ProductCard({ product }) {
               {product.brands.name}
             </p>
           )}
-          <h3
-            className="text-[#e8e8e8] text-base leading-tight font-semibold"
-            style={{ fontFamily: 'var(--font-display, "Raleway", sans-serif)', fontWeight: 600 }}
-          >
-            {product.name}
-          </h3>
+          <Link href={`/tienda/${product.slug || product.id}`}>
+            <h3
+              className="text-[#e8e8e8] text-base leading-tight font-semibold hover:text-[#c8c8c8] transition-colors"
+              style={{ fontFamily: 'var(--font-display, "Raleway", sans-serif)', fontWeight: 600 }}
+            >
+              {product.name}
+            </h3>
+          </Link>
         </div>
 
         <p
